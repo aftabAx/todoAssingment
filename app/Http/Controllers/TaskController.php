@@ -25,4 +25,9 @@ class TaskController extends Controller
         }
         return response()->json(['message' => 'Task not found'], 404);
     }
+    public function destroyAll()
+    {
+        $deletedCount = Task::truncate(); 
+        return response()->json(['message' => 'All tasks deleted', 'count' => $deletedCount], 200);
+    }
 }

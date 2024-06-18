@@ -11,6 +11,7 @@
             height: 100vh;
             background: linear-gradient(to right, #6a11cb, #2575fc);
             font-family: Arial, sans-serif;
+            margin: 0;
         }
         .container {
             background: #fff;
@@ -50,6 +51,9 @@
         .task-list li {
             padding: 10px;
             border-bottom: 1px solid #ccc;
+            background-color: #f2f2f2; 
+            margin-bottom: 8px; 
+            border-radius: 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -60,33 +64,76 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            display: none; 
+        }
+        .task-list li:hover button {
+            display: block; 
         }
         .task-list li button:hover {
             background: #ff1a1a;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .footer button {
+            padding: 10px 20px;
+            background-color: #6a11cb;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .task-count-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .task-count-container span {
+            font-weight: bold;
+        }
+        .no-task-message {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Todo App</h1>
+        <h1 style="text-align: left">Todo App</h1>
         <form class="task-form" id="task-form">
             <input type="text" id="title" placeholder="Add your new todo" required>
             <button type="submit"><i class="fas fa-plus"></i></button>
         </form>
         <ul class="task-list" id="task-list"></ul>
+        <div class="footer">
+            <div class="task-count-container" id="task-count-container">
+               <span>You have  <span id="task-count">0</span> Pending Task</span>
+                <button id="delete-all-btn">Delete All</button>
+            </div>
+            <p class="no-task-message" id="no-task-message">No tasks. Create one!</p>
+        </div>
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const taskList = document.getElementById('task-list');
             const taskForm = document.getElementById('task-form');
+            const taskCountContainer = document.getElementById('task-count-container');
+            const taskCountSpan = document.getElementById('task-count');
+            const deleteAllButton = document.getElementById('delete-all-btn');
+            const noTaskMessage = document.getElementById('no-task-message');
 
-            // Fetch tasks
             fetch('/api/tasks')
                 .then(response => response.json())
                 .then(data => {
                     data.tasks.forEach(task => {
                         addTaskToDOM(task);
                     });
+                    updateTaskCount();
+                    toggleNoTaskMessage();
                 });
 
             // Add task
@@ -105,6 +152,8 @@
                 .then(data => {
                     addTaskToDOM(data.task);
                     taskForm.reset();
+                    updateTaskCount();
+                    toggleNoTaskMessage(); 
                 });
             });
 
@@ -119,8 +168,23 @@
                     .then(response => response.json())
                     .then(() => {
                         e.target.closest('li').remove();
+                        updateTaskCount();
+                        toggleNoTaskMessage(); 
                     });
                 }
+            });
+
+            // Delete all tasks
+            deleteAllButton.addEventListener('click', function () {
+                fetch('/api/tasks', {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(() => {
+                    taskList.innerHTML = ''; 
+                    updateTaskCount();
+                    toggleNoTaskMessage();
+                });
             });
 
             function addTaskToDOM(task) {
@@ -130,9 +194,46 @@
 
                 const deleteButton = document.createElement('button');
                 deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteButton.classList.add('delete-btn'); 
+
+                deleteButton.addEventListener('click', function () {
+                    deleteTask(task.id);
+                });
+
                 li.appendChild(deleteButton);
 
                 taskList.appendChild(li);
+            }
+
+            function updateTaskCount() {
+                const taskCount = taskList.children.length;
+                taskCountSpan.textContent = taskCount;
+
+                if (taskCount === 0) {
+                    taskCountContainer.style.display = 'none';
+                } else {
+                    taskCountContainer.style.display = 'flex';
+                }
+            }
+
+            function toggleNoTaskMessage() {
+                if (taskList.children.length === 0) {
+                    noTaskMessage.style.display = 'block';
+                } else {
+                    noTaskMessage.style.display = 'none';
+                }
+            }
+
+            function deleteTask(taskId) {
+                fetch(`/api/tasks/${taskId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(() => {
+                    document.querySelector(`li[data-id="${taskId}"]`).remove();
+                    updateTaskCount();
+                    toggleNoTaskMessage(); 
+                });
             }
         });
     </script>
